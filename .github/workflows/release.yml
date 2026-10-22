@@ -65,11 +65,32 @@ jobs:
       - name: 构建 NSIS 安装包（tauri build）
         uses: tauri-apps/tauri-action@v1
 
+      # 项目是 cargo workspace（根 Cargo.toml），cargo 的 target 目录生成在【仓库根】/target/，
+      # 产物应位于 target/release/bundle/nsis/。此步骤先在两个候选位置定位 .exe：
+      # 均为空则提前失败并打印两处 find 结果，避免只在 upload 步骤看到 if-no-files-found 难以诊断。
+      - name: 定位 NSIS 产物
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT_NSIS="target/release/bundle/nsis"
+          SUB_NSIS="src-tauri/target/release/bundle/nsis"
+          echo "== find $ROOT_NSIS（仓库根 workspace target，预期位置） =="
+          find "$ROOT_NSIS" -name '*.exe' || true
+          echo "== find $SUB_NSIS（src-tauri 下候选位置，workspace 项目通常不存在） =="
+          find "$SUB_NSIS" -name '*.exe' || true
+          ROOT_HIT=$(find "$ROOT_NSIS" -name '*.exe' -print -quit 2>/dev/null || true)
+          SUB_HIT=$(find "$SUB_NSIS" -name '*.exe' -print -quit 2>/dev/null || true)
+          if [ -z "$ROOT_HIT" ] && [ -z "$SUB_HIT" ]; then
+            echo "!! 两个候选位置均未找到 .exe，产物定位失败，见上方 find 结果" >&2
+            exit 1
+          fi
+          echo ">> NSIS 产物定位成功：${ROOT_HIT:-$SUB_HIT}"
+
       - name: 上传构建产物（仅 NSIS setup.exe）
         uses: actions/upload-artifact@v7
         with:
           name: windows-nsis
-          path: src-tauri/target/release/bundle/nsis/*.exe
+          path: target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
   # ---------- 发布：固定 tag `latest`，先删旧再发新，只上传一个安装包 ----------
@@ -99,7 +120,9 @@ jobs:
             echo "!! 预期恰好 1 个安装包，实际 $COUNT 个，终止发布" >&2
             exit 1
           fi
-          gh release create latest dist/*.exe \
+          EXE=$(find dist -name '*.exe' | head -1)
+          echo ">> 实际安装包路径：$EXE"
+          gh release create latest "$EXE" \
             --target "${{ github.sha }}" \
             --title "Remote Screen Lock（Windows 安装包）" \
             --notes "自动构建 ${{ github.sha }} · 下方唯一 .exe 为 NSIS 安装包（免管理员）· 首次运行如遇 SmartScreen：更多信息→仍要运行（未签名）· 手机与电脑连同一 Wi-Fi，扫码或输配对码即用" \
