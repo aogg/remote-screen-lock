@@ -9,12 +9,12 @@
 //! | 防休（熄屏期间保持 HTTP 可达）| SetThreadExecutionState(专用线程) | caffeinate -is 子进程 |
 
 #[cfg(target_os = "windows")]
-mod windows_impl;
+pub mod windows_impl;
 #[cfg(target_os = "windows")]
 pub use windows_impl as os;
 
 #[cfg(target_os = "macos")]
-mod macos_impl;
+pub mod macos_impl;
 #[cfg(target_os = "macos")]
 pub use macos_impl as os;
 

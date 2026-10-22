@@ -84,7 +84,7 @@ pub async fn run(state: SharedState) {
         let desired = state.inner.lock().unwrap().config.port;
         // 端口重试：desired 起在 PORT_MIN..=PORT_MAX 内依次尝试
         let start = desired.clamp(PORT_MIN, PORT_MAX);
-        let mut bound: Option<(std::net::TcpListener, u16)> = None;
+        let mut bound: Option<(tokio::net::TcpListener, u16)> = None;
         for port in start..=PORT_MAX {
             match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
                 Ok(listener) => {

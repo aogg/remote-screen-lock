@@ -1,6 +1,6 @@
 //! REST API 处理器（interaction-ui.md 4.3 路由总表 + 4.5 错误码 + 4.1 响应包络）。
 
-use crate::app_state::{self, AppState, SharedState};
+use crate::app_state::{self, SharedState};
 use crate::config::Mode;
 use axum::extract::{ConnectInfo, Multipart, Path, State};
 use axum::http::{header, StatusCode};
@@ -136,11 +136,11 @@ pub async fn pair_submit(
                 "version": app_state::app_version(),
             }))
         }
-        Err(AppState::PairError::Locked(secs)) => {
+        Err(app_state::PairError::Locked(secs)) => {
             state.log(&src_of(&addr), "POST /pair", "err:locked");
             ApiError::TooManyAttempts { retry_after_sec: secs }.into_response()
         }
-        Err(AppState::PairError::Wrong(remaining)) => {
+        Err(app_state::PairError::Wrong(remaining)) => {
             state.log(&src_of(&addr), "POST /pair", "err:wrong-code");
             ApiError::PairCodeWrong { remaining }.into_response()
         }
@@ -288,14 +288,14 @@ pub async fn upload_image(
     // ////////////////  核心逻辑：入库  start  /////////////////////////////////
     match state.store_image(&file_name, bytes) {
         Ok(meta) => Ok(ok(image_meta_json(&meta))),
-        Err(AppState::ImageStoreError::TooLarge) => {
+        Err(app_state::ImageStoreError::TooLarge) => {
             Err(ApiError::TooLarge("图片过大（上限 10MB）"))
         }
-        Err(AppState::ImageStoreError::TotalExceeded) => {
+        Err(app_state::ImageStoreError::TotalExceeded) => {
             Err(ApiError::TooLarge("图片总量超限（上限 50MB），请先删除旧图"))
         }
-        Err(AppState::ImageStoreError::BadFormat(_e)) => Err(ApiError::BadFormat),
-        Err(AppState::ImageStoreError::Io(e)) => Err(ApiError::Internal(e)),
+        Err(app_state::ImageStoreError::BadFormat(_e)) => Err(ApiError::BadFormat),
+        Err(app_state::ImageStoreError::Io(e)) => Err(ApiError::Internal(e)),
     }
     // ////////////////  核心逻辑  end  ////////////////////////////////////////
 }

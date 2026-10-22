@@ -122,6 +122,36 @@ pub fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+/// 配对码换 token 的错误类型
+pub enum PairError {
+    /// 尝试次数过多（携带剩余等待秒数）
+    Locked(u64),
+    /// 配对码错误（携带剩余尝试次数）
+    Wrong(u32),
+}
+
+/// 本地密钥解锁结果
+pub struct LocalUnlockResult {
+    /// 是否解锁成功
+    pub ok: bool,
+    /// 冻结剩余秒数（>0 表示处于冻结期）
+    pub frozen_remaining_sec: u64,
+    /// 剩余尝试次数提示（失败时）
+    pub remaining_attempts: u32,
+}
+
+/// 图片入库错误（映射 S-06 错误码）
+pub enum ImageStoreError {
+    /// 单文件超 10MB（41301）
+    TooLarge,
+    /// 格式不支持 / 无法解码（41501）
+    BadFormat(String),
+    /// 总量超 50MB（41301）
+    TotalExceeded,
+    /// 写盘失败（50001）
+    Io(String),
+}
+
 impl AppState {
     /// 写一条操作日志（环形 200 条）
     pub fn log(&self, source: &str, action: &str, result: &str) {
@@ -201,14 +231,6 @@ impl AppState {
         self.regenerate_pairing();
         self.log("local", "token-reset", "ok");
         new_token
-    }
-
-    /// 配对码换 token 的错误类型
-    pub enum PairError {
-        /// 尝试次数过多（携带剩余等待秒数）
-        Locked(u64),
-        /// 配对码错误（携带剩余尝试次数）
-        Wrong(u32),
     }
 
     /// 校验配对码并发放 token（POST /api/v1/pair）
@@ -418,16 +440,6 @@ impl AppState {
 
     // ============================ 本地解锁 ============================
 
-    /// 本地密钥解锁结果
-    pub struct LocalUnlockResult {
-        /// 是否解锁成功
-        pub ok: bool,
-        /// 冻结剩余秒数（>0 表示处于冻结期）
-        pub frozen_remaining_sec: u64,
-        /// 剩余尝试次数提示（失败时）
-        pub remaining_attempts: u32,
-    }
-
     /// 校验本地解锁密钥（F-P0-09：argon2 校验 + 5 次错误冻结 30 秒）
     pub fn try_local_unlock(&self, key: &str) -> LocalUnlockResult {
         // ////////////////  校验参数（冻结期）  start  ////////////////////////////
@@ -476,18 +488,6 @@ impl AppState {
     }
 
     // ============================ 图片存储 ============================
-
-    /// 图片入库错误（映射 S-06 错误码）
-    pub enum ImageStoreError {
-        /// 单文件超 10MB（41301）
-        TooLarge,
-        /// 格式不支持 / 无法解码（41501）
-        BadFormat(String),
-        /// 总量超 50MB（41301）
-        TotalExceeded,
-        /// 写盘失败（50001）
-        Io(String),
-    }
 
     /// 保存上传图片：魔数校验 + 解码取尺寸 + 服务端重命名存储（F-P0-12 / S-06）
     pub fn store_image(&self, file_name: &str, bytes: Vec<u8>) -> Result<ImageMeta, ImageStoreError> {
