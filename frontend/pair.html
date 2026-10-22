@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!-- 首次配对页（interaction-ui 3.1）：扫码配对（推荐）+ 手动输码 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>配对 · remote-screen-lock</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body class="pair">
+  <div class="pair-box">
+    <h1>remote-screen-lock</h1>
+    <div class="sub">与你的电脑建立连接</div>
+
+    <!-- ① 扫码配对（推荐）：二维码由电脑设置窗展示，扫码后本页带 #t=<token> 打开 -->
+    <div class="pair-sec">
+      <h3>① 扫码配对（推荐）</h3>
+      <p>用手机相机扫描电脑设置窗中的二维码即可，无需手动输入。</p>
+    </div>
+
+    <!-- ② 手动连接：电脑地址 + 8 位配对码 -->
+    <div class="pair-sec">
+      <h3>② 手动连接</h3>
+      <label for="base">电脑地址</label>
+      <input id="base" type="text" placeholder="http://192.168.1.244:8326" />
+      <label for="code">配对码（8 位）</label>
+      <input id="code" type="text" inputmode="text" autocomplete="off" placeholder="4K7-QM2-ZP" maxlength="12" />
+      <div class="pair-err" id="err"></div>
+      <button class="btn-block" id="go">连 接</button>
+    </div>
+
+    <div class="pair-tip">⚠ 请确认手机与电脑连接同一 Wi-Fi / 局域网<br />局域网明文通信，请在可信网络使用</div>
+  </div>
+  <div id="toast"></div>
+  <script src="/assets/pair.js"></script>
+</body>
+</html>

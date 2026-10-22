@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<!-- 副显示器纯黑锁定页（README-appendix 1：一期默认策略=主屏内容/副屏纯黑） -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title></title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body class="blackpage">
+  <script>
+    // 阻止右键/选择等边缘交互（内容本就为空）
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('selectstart', function (e) { e.preventDefault(); });
+  </script>
+</body>
+</html>

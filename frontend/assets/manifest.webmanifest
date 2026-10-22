@@ -1,0 +1,25 @@
+{
+  "name": "remote-screen-lock",
+  "short_name": "RSL",
+  "description": "局域网远程锁屏/屏保控制台（手机网页遥控电脑）",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121418",
+  "theme_color": "#121418",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

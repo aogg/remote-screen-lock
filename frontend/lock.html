@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- 锁定窗口（主显示器）：clock / image / black 三模式（F-P0-07/08，interaction-ui 2.1~2.4） -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>已锁定</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body class="lockpage mode-clock">
+  <!-- 图片模式背景 + 可调遮罩（[E][F]） -->
+  <div class="lock-bg" id="bg" style="display:none"></div>
+  <div class="lock-mask" id="mask" style="display:none;opacity:.3"></div>
+
+  <!-- 时钟内容（[A] 时间 / [B] 日期星期），image 模式叠加显示（[G]） -->
+  <div class="lock-center" id="center">
+    <div class="lock-time" id="time">--:--</div>
+    <div class="lock-date" id="date"></div>
+  </div>
+
+  <!-- [C] 提示条：鼠标移入顶部 64px 热区浮现，3 秒无操作隐藏 -->
+  <div class="hotzone" id="hotzone"></div>
+  <div class="hint-bar" id="hint">
+    按 <kbd>Esc</kbd> 输入密钥解锁 · <kbd id="hotkeyLabel">Ctrl+Alt+Q</kbd> 直接解锁
+  </div>
+
+  <!-- [D] 密钥输入浮层 -->
+  <div class="key-overlay" id="keyOverlay">
+    <div class="key-card">
+      <h3>输入本地解锁密钥</h3>
+      <input id="keyInput" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••" />
+      <div class="key-err" id="keyErr"></div>
+      <div class="key-btns">
+        <button class="cancel" id="keyCancel">取消</button>
+        <button class="go" id="keyGo">解锁</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/lock.js"></script>
+</body>
+</html>

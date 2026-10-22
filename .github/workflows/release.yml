@@ -1,0 +1,109 @@
+# Release：构建 Windows NSIS 安装包并发布到固定 tag `latest`
+# 策略（docs/README-appendix.md 第 4 节 / F-P0-14）：
+#   1. push main / 手动触发 → windows-latest 构建（仅 NSIS，不产 MSI，单一安装包）
+#      注意：刻意不用 v* tag 触发——tauri-action 被 tag 触发时会自动按 tag 创建 release，
+#      会在 `latest` 之外多出一个带安装包的版本 release，破坏“单包”策略。
+#   2. 构建产物先经 artifact 汇总，末尾独立 release job 统一"先删旧 latest 再发新"
+#      （tauri-action 与 gh-release 均不清理旧 assets，"先删后发"不可省）
+#   3. 任意时刻 Releases 页面只有一个安装包文件（remote-screen-lock_x.y.z_x64-setup.exe）
+#      下载入口固定：https://github.com/<owner>/<repo>/releases/download/latest/<文件>
+#
+# macOS：本期不发布安装包（代码已兼容，见 src-tauri/src/platform/macos_impl.rs）。
+# 后续加入 mac 构建的步骤（F-P1-01）：
+#   build-windows 改为 matrix，例如：
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         include:
+#           - platform: windows-latest
+#             args: ''
+#           - platform: macos-latest
+#             args: '--target universal-apple-darwin'   # 单个 dmg 双架构
+#   并在 mac job 中加（tauri 官方指南要求，未公证包必须 ad-hoc 签名，否则 Apple Silicon 报"已损坏"）：
+#     - name: 安装双架构 target
+#       run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+#     - name: ad-hoc 签名环境变量
+#       if: matrix.platform == 'macos-latest'
+#       env:
+#         APPLE_SIGNING_IDENTITY: '-'
+#   release job 的 needs 加上 mac job 名，并在 gh release create 追加 dist/*.dmg；
+#   届时 Release 页面为"每平台恰好一个安装包"。
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------- 构建：Windows NSIS 单一安装包 ----------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: 安装 Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Rust 构建产物
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # tauri-action 经 npm 安装 tauri-cli（前端零构建，无需项目内 Node 依赖）
+      - name: 安装 Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # 不传 tagName/releaseId → 仅构建不上传（官方 README 约定），发布统一由下方 release job 处理
+      - name: 构建 NSIS 安装包（tauri build）
+        uses: tauri-apps/tauri-action@v1
+
+      - name: 上传构建产物（仅 NSIS setup.exe）
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-nsis
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+  # ---------- 发布：固定 tag `latest`，先删旧再发新，只上传一个安装包 ----------
+  release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-nsis
+          path: dist
+
+      - name: 删除旧的 latest release（含 tag）
+        run: gh release delete latest --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+
+      - name: 创建 latest release 并只上传 NSIS 安装包
+        run: |
+          set -e
+          echo "== 产物清单（必须只有一个 .exe） =="
+          ls -l dist
+          COUNT=$(find dist -name '*.exe' | wc -l)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "!! 预期恰好 1 个安装包，实际 $COUNT 个，终止发布" >&2
+            exit 1
+          fi
+          gh release create latest dist/*.exe \
+            --target "${{ github.sha }}" \
+            --title "Remote Screen Lock（Windows 安装包）" \
+            --notes "自动构建 ${{ github.sha }} · 下方唯一 .exe 为 NSIS 安装包（免管理员）· 首次运行如遇 SmartScreen：更多信息→仍要运行（未签名）· 手机与电脑连同一 Wi-Fi，扫码或输配对码即用" \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

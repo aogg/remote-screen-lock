@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!-- 被控端设置窗（桌面，interaction-ui 2.5）：配对/常规/锁屏/安全/日志（tab 切换时才拉数据） -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>remote-screen-lock 设置</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body class="settings">
+  <!-- 侧边导航 -->
+  <div class="side">
+    <div class="logo">remote-screen-lock</div>
+    <button data-tab="pair" class="active">▸ 配对</button>
+    <button data-tab="general">常规</button>
+    <button data-tab="lockscreen">锁屏</button>
+    <button data-tab="security">安全</button>
+    <button data-tab="logs">日志</button>
+  </div>
+
+  <div class="main">
+    <!-- 配对 -->
+    <div class="panel active" id="panel-pair">
+      <h2>配对</h2>
+      <div class="qr-wrap">
+        <div class="qr-box" id="qrBox"></div>
+        <div class="pairinfo">
+          <div>局域网地址：<span id="pairUrls">…</span></div>
+          <div>配对码：<span class="code" id="pairCode">…</span></div>
+          <div class="muted" id="pairExpire">有效期 10:00</div>
+          <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn ghost" id="btnRegenCode">重新生成配对码</button>
+            <button class="btn danger" id="btnResetToken">重置 token</button>
+          </div>
+          <div class="muted" style="margin-top:8px">token 前 4 位：<span id="tokenPreview"></span>（其余不展示）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 常规 -->
+    <div class="panel" id="panel-general">
+      <h2>常规</h2>
+      <div class="form-row">
+        <span class="label">服务端口（8326~8335）</span>
+        <input type="number" id="inPort" min="8326" max="8335" step="1" />
+      </div>
+      <div class="hint">端口被占用时启动会自动在 8326~8335 内顺延；修改后重启应用生效</div>
+      <div class="portwarn" id="portWarn">⚠ 当前配置端口被占用，服务实际运行于 <b id="actualPort"></b></div>
+      <div class="form-row">
+        <span class="label">语言</span>
+        <select disabled><option>简体中文</option></select>
+      </div>
+      <div class="hint">多语言（P2）；开机自启（P1，F-P1-10）</div>
+    </div>
+
+    <!-- 锁屏 -->
+    <div class="panel" id="panel-lockscreen">
+      <h2>锁屏</h2>
+      <div class="form-row">
+        <span class="label">默认模式</span>
+        <div class="radio-group" id="rgMode">
+          <button data-mode="clock">时钟</button>
+          <button data-mode="image">图片</button>
+          <button data-mode="black">黑屏</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <span class="label">时间制式</span>
+        <div class="radio-group" id="rgHour">
+          <button data-hour="24">24 小时制</button>
+          <button data-hour="12">12 小时制</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <span class="label">图片遮罩 <b id="maskVal">30%</b></span>
+        <input type="range" id="inMask" min="0" max="60" step="5" />
+      </div>
+      <div class="hint">遮罩用于保证图片模式下时间可读（0~60%，默认 30%）；图片上传在手机控制台「更换屏保图片」</div>
+      <div class="form-row">
+        <span class="label">多显示器策略</span>
+        <select disabled><option>主屏时钟 + 副屏黑屏（默认）</option></select>
+      </div>
+      <div class="hint">策略可选项（全部同内容/指定显示器）规划于 P1（F-P1-06）</div>
+    </div>
+
+    <!-- 安全 -->
+    <div class="panel" id="panel-security">
+      <h2>安全</h2>
+      <div class="form-row">
+        <span class="label">系统锁（LockWorkStation / CGSession）</span>
+        <button class="switch on" id="swSysLock"></button>
+      </div>
+      <div class="hint">开启后远程锁屏同时调用系统级锁：此后必须在本机输入系统登录密码（系统安全边界，任何软件都无法也不应远程绕过）</div>
+      <div class="form-row">
+        <span class="label">本地解锁密钥</span>
+        <input type="password" id="inOldKey" placeholder="旧密钥（未设置过可留空）" maxlength="6" style="width:170px" />
+        <input type="password" id="inNewKey" placeholder="新密钥（4~6 位数字）" maxlength="6" style="width:170px" />
+        <button class="btn" id="btnSaveKey">设置密钥</button>
+      </div>
+      <div class="hint" id="keyHint">密钥仅以 argon2id 哈希存储，配置文件不含明文；首次使用请先设置一个</div>
+      <div class="form-row">
+        <span class="label">解锁快捷键</span>
+        <select id="selHotkey">
+          <option value="ctrl+alt+q">Ctrl+Alt+Q（默认）</option>
+          <option value="ctrl+alt+l">Ctrl+Alt+L</option>
+          <option value="ctrl+shift+l">Ctrl+Shift+L</option>
+          <option value="alt+shift+l">Alt+Shift+L</option>
+        </select>
+      </div>
+      <div class="hint">在锁定窗口按下快捷键可直接解锁（坐在电脑前的人的快速通道）</div>
+    </div>
+
+    <!-- 日志 -->
+    <div class="panel" id="panel-logs">
+      <h2>日志（最近 200 条 · token 已脱敏）</h2>
+      <div class="form-row"><span class="label"></span><button class="btn ghost" id="btnReloadLogs">刷新</button></div>
+      <table class="log-table">
+        <thead><tr><th>时间</th><th>来源</th><th>动作</th><th>结果</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 保存条 -->
+    <div class="save-bar">
+      <button class="btn" id="btnSaveAll">保存设置</button>
+      <span class="saved-tip" id="savedTip"></span>
+      <span class="muted" style="color:#6B7280;font-size:12px" id="verInfo"></span>
+    </div>
+  </div>
+
+  <script src="/assets/settings.js"></script>
+</body>
+</html>

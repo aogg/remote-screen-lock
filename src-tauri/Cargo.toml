@@ -1,0 +1,57 @@
+[package]
+# 应用名（二进制名与 productName 保持一致）
+name = "remote-screen-lock"
+version = "0.1.0"
+description = "remote-screen-lock 被控端：局域网手机远程锁屏/熄屏/唤醒/屏保（Tauri 2 + axum）"
+authors = ["aogg"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.90"
+
+# Tauri 构建脚本：内嵌前端资源、生成 capability 等
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 2 核心
+# - tray-icon：系统托盘常驻（F-P0-01）
+# - protocol-asset：asset 协议（锁屏页读取本地屏保图片）
+tauri = { version = "2", features = ["tray-icon", "protocol-asset"] }
+# 系统对话框（托盘退出二次确认）
+tauri-plugin-dialog = "2"
+
+# 内置 HTTP 服务（同端口服务 REST API + 手机控制台静态页）
+# 默认 feature 已含 json/tokio/http1；追加 multipart 支持图片上传
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["net", "rt-multi-thread", "time", "sync", "macros", "fs", "io-util"] }
+
+# 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# CSPRNG 随机（token/配对码/密钥/图片id）
+rand = "0.8"
+
+# 本地解锁密钥哈希（S-05：argon2id）
+argon2 = "0.5"
+
+# 二维码生成（纯 Rust，仅 svg 渲染，零外网依赖）
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+
+# 局域网 IP 枚举（配对地址展示/二维码）
+if-addrs = "0.15"
+# 主机名（状态接口 deviceName）
+hostname = "0.4"
+
+# 图片解码校验 + 尺寸提取（jpg/png/webp）
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
+# Windows 系统 API（锁屏/熄屏/唤醒/防休）
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",             # HWND / LPARAM 等基础类型
+    "Win32_System_Shutdown",        # LockWorkStation（系统锁）
+    "Win32_System_Power",           # SetThreadExecutionState（阻止休眠）
+    "Win32_UI_WindowsAndMessaging", # SendMessageW + WM_SYSCOMMAND/SC_MONITORPOWER（熄屏/唤醒）
+    "Win32_UI_Input_KeyboardAndMouse", # SendInput（模拟鼠标移动唤醒）
+] }

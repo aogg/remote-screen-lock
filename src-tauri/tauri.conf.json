@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "remote-screen-lock",
+  "version": "0.1.0",
+  "identifier": "com.aogg.remote-screen-lock",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "settings",
+        "title": "remote-screen-lock 设置",
+        "url": "settings.html",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Utility",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "targets": ["nsis"],
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

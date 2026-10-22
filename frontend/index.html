@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- 手机网页控制台（interaction-ui 3.2）：状态卡 + 2×2 主操作 + 模式切换 + 图片管理 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>remote-screen-lock 控制台</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body class="console">
+  <!-- [1] 顶栏：设备名/系统 + 状态点 -->
+  <div class="topbar">
+    <div class="dev"><span id="devName">…</span><small id="devOs"></small></div>
+    <div class="status-word"><span class="dot" id="dot"></span><span id="dotText">连接中</span></div>
+  </div>
+
+  <!-- 离线横幅（连续 2 次轮询失败显示，恢复后自动隐藏） -->
+  <div class="banner" id="offlineBanner">被控端不在线，请检查电脑与网络</div>
+
+  <!-- 主视图 -->
+  <div class="view active" id="view-main">
+    <!-- [2] 状态卡 -->
+    <div class="card">
+      <div class="kv"><span class="k">当前模式</span><span class="v" id="stMode">—</span></div>
+      <div class="kv"><span class="k">屏幕状态</span><span class="v" id="stDisplay">—</span></div>
+      <div class="kv"><span class="k">锁定状态</span><span class="v" id="stLock">—</span></div>
+      <div class="kv"><span class="k">应用版本</span><span class="v" id="stVer">—</span></div>
+      <div class="kv"><span class="k">本机时间</span><span class="v" id="stTime">—</span></div>
+    </div>
+
+    <!-- [3] 2×2 主操作（触控目标 ≥64px；锁=蓝/解锁=绿/熄屏=琥珀/唤醒=中性） -->
+    <div class="grid-actions">
+      <button class="btn-main b-lock" id="btnLock">
+        <span class="spin"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+        立即锁屏
+      </button>
+      <button class="btn-main b-unlock" id="btnUnlock">
+        <span class="spin"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>
+        解锁
+        <span class="note">若已启用系统级锁，解锁后将显示系统登录界面</span>
+      </button>
+      <button class="btn-main b-off" id="btnScreenOff">
+        <span class="spin"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg>
+        熄屏
+      </button>
+      <button class="btn-main b-on" id="btnScreenOn">
+        <span class="spin"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+        唤醒
+      </button>
+    </div>
+
+    <!-- [4] 屏保模式三段选择器 -->
+    <div class="seg-title">屏保模式</div>
+    <div class="seg" id="segMode">
+      <button data-mode="clock">时钟</button>
+      <button data-mode="image">图片</button>
+      <button data-mode="black">黑屏</button>
+    </div>
+
+    <!-- [5] 图片管理 / [7] 设置 / 诊断 -->
+    <div class="row-entry">
+      <button id="goImages">🖼 更换屏保图片</button>
+      <button id="goSettings">⚙ 设置</button>
+      <button id="goDiag">🩺 诊断</button>
+      <button id="unpair">解绑本机</button>
+    </div>
+  </div>
+
+  <!-- [5] 图片管理视图 -->
+  <div class="view" id="view-images">
+    <div class="pagehead"><button id="backFromImages">← 返回</button><h2>屏保图片</h2></div>
+    <button class="upload-btn" id="uploadBtn">＋ 上传图片（jpg/png/webp ≤10MB）</button>
+    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
+    <div class="img-grid" id="imgGrid"></div>
+    <div class="empty-tip" id="imgEmpty">还没有屏保图片，上传一张吧（最新上传的会自动作为锁屏背景）</div>
+  </div>
+
+  <!-- 设置视图（只读 + 跳转引导，端口/系统锁等在电脑端修改） -->
+  <div class="view" id="view-settings">
+    <div class="pagehead"><button id="backFromSettings">← 返回</button><h2>设置</h2></div>
+    <div class="card">
+      <div class="kv"><span class="k">默认模式</span><span class="v" id="cfgMode">—</span></div>
+      <div class="kv"><span class="k">时间制式</span><span class="v" id="cfgHour">—</span></div>
+      <div class="kv"><span class="k">图片遮罩</span><span class="v" id="cfgMask">—</span></div>
+      <div class="kv"><span class="k">系统锁</span><span class="v" id="cfgSysLock">—</span></div>
+      <div class="kv"><span class="k">服务端口</span><span class="v" id="cfgPort">—</span></div>
+    </div>
+    <div class="empty-tip">端口 / 系统锁 / 解锁密钥等请在本机电脑端的“设置”窗口修改</div>
+  </div>
+
+  <!-- 诊断视图（P1 完整能力，此处展示版本与在线信息） -->
+  <div class="view" id="view-diag">
+    <div class="pagehead"><button id="backFromDiag">← 返回</button><h2>诊断</h2></div>
+    <div class="card">
+      <div class="kv"><span class="k">被控端版本</span><span class="v" id="dgVer">—</span></div>
+      <div class="kv"><span class="k">系统</span><span class="v" id="dgOs">—</span></div>
+      <div class="kv"><span class="k">开机时长</span><span class="v" id="dgUp">—</span></div>
+    </div>
+    <div class="empty-tip">操作历史与统计（F-P1-07）规划于二期</div>
+  </div>
+
+  <!-- [8] 底部轮询指示 + 手动刷新 -->
+  <div class="footer">
+    <span id="pollInfo">上次刷新 — · 每 3s 轮询</span>
+    <button id="refreshNow">立即刷新</button>
+  </div>
+
+  <div id="toast"></div>
+  <script src="/assets/console.js"></script>
+</body>
+</html>

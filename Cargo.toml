@@ -1,0 +1,12 @@
+# remote-screen-lock Rust workspace 根
+# 仅一个成员：src-tauri（Tauri 2 被控端桌面应用）
+[workspace]
+members = ["src-tauri"]
+resolver = "2"
+
+# 统一release优化：更小的安装包
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
